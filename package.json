@@ -1,0 +1,34 @@
+{
+  "name": "raymarcher.io",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hhissa/raymarcher.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hhissa/raymarcher.io/issues"
+  },
+  "homepage": "https://github.com/hhissa/raymarcher.io#readme",
+  "dependencies": {
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "vite-plugin-glsl": "^1.5.5"
+  },
+  "scripts": {
+    "start": "vite",
+    "build": "vite build",
+    "dev": "vite"
+  }
+}
