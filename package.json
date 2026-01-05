@@ -15,6 +15,7 @@
   },
   "homepage": "https://github.com/hhissa/raymarcher.io#readme",
   "dependencies": {
+    "monaco-editor": "^0.55.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },
@@ -24,7 +25,8 @@
     "@vitejs/plugin-react": "^5.1.2",
     "typescript": "^5.9.3",
     "vite": "^7.3.0",
-    "vite-plugin-glsl": "^1.5.5"
+    "vite-plugin-glsl": "^1.5.5",
+    "vite-plugin-monaco-editor": "^1.1.0"
   },
   "scripts": {
     "start": "vite",
