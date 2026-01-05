@@ -1,37 +1,36 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+
+import React from "react";
+import { Editor } from "./src/application/editor/editor";
+import { RaymarchCanvas } from "./src/application/canvas/raymarch_canvas";
 import ReactDOM from "react-dom/client";
 
-import { Editor } from "./src/application/editor/editor";
-import { WebGLRenderer } from "./src/adapters/renderers/webgl/webgl_renderer";
-import { testScene } from "./test/test_scene";
-import { ShaderUseCases } from "./src/core/usecases";
+export function App() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column", // stack vertically
+        height: "100vh",
+        width: "100vw",
+        overflow: "hidden",
+      }}
+    >
+      {/* Editor at the top */}
+      <div style={{ height: "40vh", minHeight: 200 }}>
+        <Editor />
+      </div>
 
-
-const canvas = document.getElementById("raymarch-canvas") as HTMLCanvasElement;
-const renderer = new WebGLRenderer();
-renderer.initialize(canvas);
-
-// Optional: set viewport
-renderer.resize(canvas.width, canvas.height);
-function resizeCanvas(canvas: HTMLCanvasElement, renderer: WebGLRenderer) {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const width = Math.floor(canvas.clientWidth * dpr);
-  const height = Math.floor(canvas.clientHeight * dpr);
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-    renderer.resize(width, height);
-    renderer.render();
-  }
-}
-resizeCanvas(canvas, renderer);
-window.addEventListener("resize", () => requestAnimationFrame(() => resizeCanvas(canvas, renderer)));
-const result = renderer.compile(testScene);
-
-if (result.errors.length > 0) {
-  console.error("Shader compilation failed:", result.errors);
-} else {
-  console.log("Shader compiled successfully!");
+      {/* Canvas fills the rest */}
+      <div style={{ flex: 1, position: "relative" }}>
+        <RaymarchCanvas />
+      </div>
+    </div>
+  );
 }
 
-renderer.render(testScene.cameraPos, testScene.cameraDir);
+const container = document.getElementById("app-root");
+if (!container) throw new Error("No root element found");
+
+const root = ReactDOM.createRoot(container);
+root.render(<App />);
+

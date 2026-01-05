@@ -5,15 +5,43 @@ interface ShaderError {
   message: string;
 }
 export class ShaderUseCases {
-  compileShader(renderer: Renderer, scene: Scene): { errors: ShaderError[] } {
-    const result = renderer.compile(scene);
+
+  private renderer: Renderer;
+  constructor(renderer: Renderer) {
+    this.renderer = renderer;
+  }
+
+  parseGLSLErrors(log: string): ShaderError[] {
+    const errors: { line: number; message: string }[] = [];
+
+    const regex = /ERROR:\s*\d+:(\d+):\s*(.*)/g;
+    let match;
+
+    while ((match = regex.exec(log)) !== null) {
+      errors.push({
+        line: Number(match[1]) - 1, // editors are 0-based
+        message: match[2],
+      });
+    }
+
+    return errors;
+  }
+
+  compileShaderScene(scene: Scene): { errors: ShaderError[] } {
+    const result = this.renderer.compile(scene);
 
     if (result.errors.length > 0) {
-      console.error("Shader compilation failed:", result.errors);
+      var errorsParsed = this.parseGLSLErrors(result.errors[0].message);
+      return { errors: errorsParsed };
     } else {
       console.log("Shader compiled successfully!");
     }
 
     return result;
+  }
+
+  compileShaderCode(code: string) {
+    var sceneModel: Scene = { name: "scene", shader: { id: "userModule", src: code }, cameraPos: [0.0, 0.0, 0.0], cameraDir: [0.0, 0.0, -1.0] }
+    this.compileShaderScene(sceneModel);
   }
 }

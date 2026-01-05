@@ -14,3 +14,19 @@ export function validateShaderCode(src: string) {
 
   return errors;
 }
+
+function parseGLSLErrors(log: string) {
+  const errors: { line: number; message: string }[] = [];
+
+  const regex = /ERROR:\s*\d+:(\d+):\s*(.*)/g;
+  let match;
+
+  while ((match = regex.exec(log)) !== null) {
+    errors.push({
+      line: Number(match[1]) - 1, // editors are 0-based
+      message: match[2],
+    });
+  }
+
+  return errors;
+}

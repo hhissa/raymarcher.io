@@ -128,6 +128,9 @@ export const Editor: React.FC<Props> = ({
         <button
           onClick={() => {
             const codeValue = editorRef.current?.getValue() ?? "";
+            //validate glsl code:
+            //add error lines 
+            //do not compile if error is present
             onCompile?.(codeValue);
           }}
         >
