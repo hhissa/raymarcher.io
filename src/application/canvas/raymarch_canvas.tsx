@@ -1,10 +1,14 @@
-
-import React, { useLayoutEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { WebGLRenderer } from "../../adapters/renderers/webgl/webgl_renderer";
 import { ShaderUseCases } from "../../core/usecases";
 import { testScene } from "../../../test/test_scene";
 
-export function RaymarchCanvas() {
+export interface RaymarchCanvasHandle {
+  renderer: WebGLRenderer | null;
+  useCases: ShaderUseCases | null;
+}
+
+export const RaymarchCanvas = forwardRef<RaymarchCanvasHandle>((_, ref) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const useCasesRef = useRef<ShaderUseCases | null>(null);
@@ -35,6 +39,7 @@ export function RaymarchCanvas() {
     resize();
     window.addEventListener("resize", resize);
 
+    // Initial compile + render
     const { errors } = useCasesRef.current.compileShaderScene(testScene);
     if (errors.length === 0) {
       renderer.render(testScene.cameraPos, testScene.cameraDir);
@@ -48,14 +53,14 @@ export function RaymarchCanvas() {
     };
   }, []);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "block",
-      }}
-    />
-  );
-}
+  useImperativeHandle(ref, () => ({
+    get renderer() {
+      return rendererRef.current;
+    },
+    get useCases() {
+      return useCasesRef.current;
+    },
+  }));
+
+  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
+});
