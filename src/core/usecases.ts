@@ -31,14 +31,18 @@ export class ShaderUseCases {
     const result = this.renderer.compile(scene);
 
     if (result.errors.length > 0) {
-      console.log("errors present")
-      var errorsParsed = this.parseGLSLErrors(result.errors[0].line, result.errors[0].message);
-      return { errors: errorsParsed };
-    } else {
-      console.log("Shader compiled successfully!");
-      this.renderer.render(scene.cameraPos, scene.cameraDir)
+      const errorsParsed = this.parseGLSLErrors(
+        result.errors[0].line,
+        result.errors[0].message
+      );
+
+      return {
+        errors: errorsParsed.map(e => ({ ...e })) // defensive copy
+      };
     }
-    return result;
+
+    this.renderer.render(scene.cameraPos, scene.cameraDir);
+    return { errors: [] }; // NEVER return `result`
   }
 
   compileShaderCode(code: string) {

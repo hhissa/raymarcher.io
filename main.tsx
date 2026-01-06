@@ -11,13 +11,12 @@ export function App() {
 
   const handleCompile = (code: string) => {
     const renderer = canvasRef.current?.renderer;
-    if (!renderer) return;
+    if (!renderer) return [];
 
     console.log("running use case");
 
     const usecase = new ShaderUseCases(renderer);
     const { errors } = usecase.compileShaderCode(code);
-
     if (errors.length > 0) console.error(errors);
     return errors;
   };

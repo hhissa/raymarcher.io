@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Editor } from "../editor/editor";
+import { ShaderError } from "../../core/error";
 
 // Example SDF data
 const sdfReference = `
@@ -76,7 +77,7 @@ interface Project {
 
 interface ShaderTabsProps {
   initialCode?: string;
-  onCompile?: (code: string) => void; // pass compile events up
+  onCompile?: (code: string) => ShaderError[]; // pass compile events up
 }
 
 export const ShaderTabs: React.FC<ShaderTabsProps> = ({
@@ -130,7 +131,11 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
             onChange={setCurrentCode}
             onCompile={(code) => {
               // Propagate to parent
-              if (onCompile) onCompile(code);
+              if (onCompile) {
+                return onCompile(code);
+              } else {
+                return []
+              }
             }}
           />
         )}

@@ -1,27 +1,30 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import * as monaco from "monaco-editor";
-// Monaco Web Worker fix
 
 interface ShaderError {
-  line: number;
+  line: number;      // 1-based GLSL line number
   message: string;
 }
 
 interface Props {
   code?: string;
-  errors?: ShaderError[] | null;
   onChange?: (code: string) => void;
   onCompile?: (code: string) => ShaderError[];
 }
 
+/* ---- UI constants ---- */
 const HEADER_HEIGHT = 32;
-const LINE_HEIGHT = 18; // Monaco default ~18px
+const LINE_HEIGHT = 18;
 const COLLAPSED_LINES = 3;
 const COLLAPSED_HEIGHT = HEADER_HEIGHT + COLLAPSED_LINES * LINE_HEIGHT;
 
+/* ---- If you inject hidden GLSL above user code, set this ---- */
+// const INJECTED_HEADER_LINES = 0;
+const INJECTED_HEADER_LINES = 0;
+
 export const Editor: React.FC<Props> = ({
   code = "",
-  errors = [],
   onChange,
   onCompile,
 }) => {
@@ -29,12 +32,13 @@ export const Editor: React.FC<Props> = ({
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
 
   const [collapsed, setCollapsed] = useState(false);
+  const [errors, setErrors] = useState<ShaderError[]>([]);
 
-  // Initialize editor
+  /* ------------------ INIT EDITOR ------------------ */
   useEffect(() => {
     if (!containerRef.current) return;
 
-    editorRef.current = monaco.editor.create(containerRef.current, {
+    const editor = monaco.editor.create(containerRef.current, {
       value: code,
       language: "glsl",
       theme: "vs-dark",
@@ -42,22 +46,21 @@ export const Editor: React.FC<Props> = ({
       minimap: { enabled: false },
     });
 
-    // Sync editor changes to parent
-    const changeListener = editorRef.current.onDidChangeModelContent(() => {
-      const value = editorRef.current?.getValue();
-      if (value !== undefined && onChange) {
-        onChange(value);
-      }
+    editorRef.current = editor;
+
+    const changeListener = editor.onDidChangeModelContent(() => {
+      const value = editor.getValue();
+      onChange?.(value);
     });
 
     return () => {
       changeListener.dispose();
-      editorRef.current?.dispose();
+      editor.dispose();
       editorRef.current = null;
     };
   }, []);
 
-  // Update editor value if parent changes
+  /* ------------------ SYNC CODE ------------------ */
   useEffect(() => {
     const editor = editorRef.current;
     const model = editor?.getModel();
@@ -70,29 +73,63 @@ export const Editor: React.FC<Props> = ({
     }
   }, [code]);
 
-  // Set error markers
+  /* ------------------ ERROR MARKERS ------------------ */
   useEffect(() => {
     const editor = editorRef.current;
     const model = editor?.getModel();
     if (!model) return;
 
-    if (!errors || errors.length === 0) {
+    if (errors.length === 0) {
       monaco.editor.setModelMarkers(model, "shader-errors", []);
       return;
     }
 
-    const markers = errors.map((err) => ({
-      startLineNumber: Math.max(1, (err.line ?? 0) + 1),
-      endLineNumber: Math.max(1, (err.line ?? 0) + 1),
-      startColumn: 1,
-      endColumn: model.getLineLength((err.line ?? 0) + 1) + 1,
-      message: err.message ?? "Shader error",
-      severity: monaco.MarkerSeverity.Error,
-    }));
+    const lineCount = model.getLineCount();
+
+    const markers: monaco.editor.IMarkerData[] = errors.map(err => {
+      // Translate compiler line → editor line
+      const rawLine = err.line - INJECTED_HEADER_LINES;
+
+      // Clamp (CRITICAL: out-of-range = no markers rendered)
+      const line = Math.min(
+        Math.max(1, rawLine),
+        lineCount
+      );
+      console.log(line)
+      return {
+        startLineNumber: line + 1,
+        endLineNumber: line + 1,
+        startColumn: 1,
+        endColumn: model.getLineLength(line) + 1,
+        message: err.message,
+        severity: monaco.MarkerSeverity.Error,
+      };
+    });
 
     monaco.editor.setModelMarkers(model, "shader-errors", markers);
   }, [errors]);
 
+  /* ------------------ COMPILE ------------------ */
+  const compile = () => {
+    const editor = editorRef.current;
+    if (!editor || !onCompile) return;
+    const codeValue = editor.getValue();
+    const compileErrors = onCompile(codeValue) ?? [];
+
+    console.log("=== COMPILE DEBUG ===");
+    console.log("Errors returned:", compileErrors);
+    console.log("Error count:", compileErrors.length);
+    if (compileErrors.length > 0) {
+      console.log("First error:", compileErrors[0]);
+      console.log("Line number:", compileErrors[0].line);
+    }
+    console.log("Editor line count:", editor.getModel()?.getLineCount());
+    console.log("===================");
+
+    setErrors(compileErrors);
+  };
+
+  /* ------------------ RENDER ------------------ */
   return (
     <div
       style={{
@@ -117,7 +154,7 @@ export const Editor: React.FC<Props> = ({
           userSelect: "none",
         }}
       >
-        <button onClick={() => setCollapsed((v) => !v)}>
+        <button onClick={() => setCollapsed(v => !v)}>
           {collapsed ? "▲" : "▼"}
         </button>
 
@@ -125,40 +162,12 @@ export const Editor: React.FC<Props> = ({
           GLSL Editor
         </span>
 
-        <button
-          onClick={() => {
-            const codeValue = editorRef.current?.getValue() ?? "";
-            //validate glsl code:
-            //add error lines 
-            //do not compile if error is present
-            var errors = onCompile?.(codeValue);
-            if (!errors) { return }
-            console.log(errors)
-            // Feed errors to Monaco
-            if (editorRef.current) {
-              const model = editorRef.current.getModel();
-              if (!model) return;
-
-              const markers = errors.map(err => ({
-                startLineNumber: Math.max(1, (err.line ?? 0) + 1),
-                endLineNumber: Math.max(1, (err.line ?? 0) + 1),
-                startColumn: 1,
-                endColumn: model.getLineLength((err.line ?? 0) + 1) + 1,
-                message: err.message ?? "Shader error",
-                severity: monaco.MarkerSeverity.Error,
-              }));
-
-              monaco.editor.setModelMarkers(model, "shader-errors", markers);
-            }
-
-          }}
-        >
-          Compile
-        </button>
+        <button onClick={compile}>Compile</button>
       </div>
 
-      {/* Editor container */}
+      {/* Monaco */}
       <div ref={containerRef} style={{ flex: 1 }} />
     </div>
   );
-};;
+};
+
