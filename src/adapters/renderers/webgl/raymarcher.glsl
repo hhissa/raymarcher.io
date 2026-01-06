@@ -68,6 +68,18 @@ void initRayout(out RayInfo ray)
 ///////////////////////////////////////////////////////////////////////////////////////
 // BOOLEAN OPERATORS (branchless, color-aware) //
 
+vec3 rotatey(vec3 p, float theta) {
+    return p * mat3(vec3(cos(theta), 0.0, sin(theta)),
+     vec3(0.0, 1.0, 0.0), 
+     vec3(-sin(theta), 0.0, cos(theta)));
+}
+
+vec3 rotatex(vec3 p, float theta) {
+    return p * mat3(vec3(1.0, 0.0, 0.0), 
+    vec3(0.0, cos(theta), -sin(theta)), 
+    vec3(0.0, sin(theta), cos(theta)));;
+}
+
 // Union
 SDF opUnion(SDF a, SDF b) {
     float k = step(b.dist, a.dist);

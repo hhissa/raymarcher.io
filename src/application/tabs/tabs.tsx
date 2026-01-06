@@ -2,7 +2,11 @@ import React, { useState } from "react";
 import { Editor } from "../editor/editor";
 
 // Example SDF data
-const sdfReference = `// Union
+const sdfReference = `
+vec3 rotatey(vec3 p, float theta) 
+
+vec3 rotatex(vec3 p, float theta)
+// Union
 SDF opUnion(SDF a, SDF b) 
 
 // Subtraction
