@@ -124,10 +124,7 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
           <Editor
             code={currentCode}
             onChange={setCurrentCode}
-            onCompile={(code) => {
-              // Propagate to parent
-              if (onCompile) onCompile(code);
-            }}
+            onCompile={(code) => onCompile(code)}
           />
         )}
 
@@ -185,4 +182,4 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
     </div>
   );
 };
-;
+
