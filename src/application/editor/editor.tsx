@@ -11,7 +11,7 @@ interface Props {
   code?: string;
   errors?: ShaderError[] | null;
   onChange?: (code: string) => void;
-  onCompile?: (code: string) => void;
+  onCompile?: (code: string) => ShaderError[];
 }
 
 const HEADER_HEIGHT = 32;
@@ -131,7 +131,26 @@ export const Editor: React.FC<Props> = ({
             //validate glsl code:
             //add error lines 
             //do not compile if error is present
-            onCompile?.(codeValue);
+            var errors = onCompile?.(codeValue);
+            if (!errors) { return }
+            console.log(errors)
+            // Feed errors to Monaco
+            if (editorRef.current) {
+              const model = editorRef.current.getModel();
+              if (!model) return;
+
+              const markers = errors.map(err => ({
+                startLineNumber: Math.max(1, (err.line ?? 0) + 1),
+                endLineNumber: Math.max(1, (err.line ?? 0) + 1),
+                startColumn: 1,
+                endColumn: model.getLineLength((err.line ?? 0) + 1) + 1,
+                message: err.message ?? "Shader error",
+                severity: monaco.MarkerSeverity.Error,
+              }));
+
+              monaco.editor.setModelMarkers(model, "shader-errors", markers);
+            }
+
           }}
         >
           Compile

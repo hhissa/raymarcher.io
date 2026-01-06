@@ -8,28 +8,36 @@ import { ShaderUseCases } from "./src/core/usecases";
 export function App() {
   const canvasRef = useRef<RaymarchCanvasHandle>(null);
 
-  // Handler for Editor compile button
   const handleCompile = (code: string) => {
     const renderer = canvasRef.current?.renderer;
+    if (!renderer) return;
 
+    console.log("running use case");
 
-
-    console.log("running use case"); // <-- this will now fire
-
-    const usecase = new ShaderUseCases(renderer!)
+    const usecase = new ShaderUseCases(renderer);
     const { errors } = usecase.compileShaderCode(code);
 
-
+    if (errors.length > 0) console.error(errors);
+    return errors;
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-      <div style={{ height: "30vh", minHeight: 200 }}>
-        <Editor code={testScene.shader.src} onCompile={handleCompile} />
-      </div>
+    <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
+      {/* Fullscreen canvas */}
+      <RaymarchCanvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />
 
-      <div style={{ flex: 1 }}>
-        <RaymarchCanvas ref={canvasRef} />
+      {/* Editor overlay */}
+      <div style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "30vh", // editor height
+        minHeight: 200,
+        zIndex: 10,
+        pointerEvents: "auto" // editor should be interactable
+      }}>
+        <Editor code={testScene.shader.src} onCompile={handleCompile} />
       </div>
     </div>
   );
@@ -40,4 +48,3 @@ if (!container) throw new Error("No root element found");
 
 const root = ReactDOM.createRoot(container);
 root.render(<App />);
-

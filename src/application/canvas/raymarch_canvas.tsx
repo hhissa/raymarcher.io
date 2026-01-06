@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import React, { useLayoutEffect, useRef, forwardRef, useImperativeHandle, CSSProperties } from "react";
 import { WebGLRenderer } from "../../adapters/renderers/webgl/webgl_renderer";
 import { ShaderUseCases } from "../../core/usecases";
 import { testScene } from "../../../test/test_scene";
@@ -8,7 +8,12 @@ export interface RaymarchCanvasHandle {
   useCases: ShaderUseCases | null;
 }
 
-export const RaymarchCanvas = forwardRef<RaymarchCanvasHandle>((_, ref) => {
+// Add props type
+interface RaymarchCanvasProps {
+  style?: CSSProperties;
+}
+
+export const RaymarchCanvas = forwardRef<RaymarchCanvasHandle, RaymarchCanvasProps>((props, ref) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const useCasesRef = useRef<ShaderUseCases | null>(null);
@@ -62,5 +67,5 @@ export const RaymarchCanvas = forwardRef<RaymarchCanvasHandle>((_, ref) => {
     },
   }));
 
-  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
+  return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block", ...props.style }} />;
 });

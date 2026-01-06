@@ -11,7 +11,7 @@ export class ShaderUseCases {
     this.renderer = renderer;
   }
 
-  parseGLSLErrors(log: string): ShaderError[] {
+  parseGLSLErrors(startLine: number, log: string): ShaderError[] {
     const errors: { line: number; message: string }[] = [];
 
     const regex = /ERROR:\s*\d+:(\d+):\s*(.*)/g;
@@ -19,7 +19,7 @@ export class ShaderUseCases {
 
     while ((match = regex.exec(log)) !== null) {
       errors.push({
-        line: Number(match[1]) - 1, // editors are 0-based
+        line: Number(match[1]) - startLine - 1, // editors are 0-based
         message: match[2],
       });
     }
@@ -32,7 +32,7 @@ export class ShaderUseCases {
 
     if (result.errors.length > 0) {
       console.log("errors present")
-      var errorsParsed = this.parseGLSLErrors(result.errors[0].message);
+      var errorsParsed = this.parseGLSLErrors(result.errors[0].line, result.errors[0].message);
       return { errors: errorsParsed };
     } else {
       console.log("Shader compiled successfully!");

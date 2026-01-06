@@ -46,8 +46,8 @@ export class WebGLRenderer implements Renderer {
     }
 
     const gl = this.gl;
-
-    const fragSource = raymarcher.replace(
+    const templateLines = raymarcher.split("\n");
+    const userInsertLine = templateLines.findIndex(line => line.includes("{{USER_MAP}}")); const fragSource = raymarcher.replace(
       "{{USER_MAP}}",
       scene.shader.src
     );
@@ -78,7 +78,7 @@ export class WebGLRenderer implements Renderer {
 
     const frag = compileShader(gl.FRAGMENT_SHADER, fragSource);
     if (frag.error) {
-      return { errors: [{ line: 0, message: "Fragment shader: " + frag.error }] };
+      return { errors: [{ line: userInsertLine, message: "Fragment shader: " + frag.error }] };
     }
 
     const program = gl.createProgram()!;
