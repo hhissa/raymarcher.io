@@ -138,7 +138,7 @@ export const Editor: React.FC<Props> = ({
             if (editorRef.current) {
               const model = editorRef.current.getModel();
               if (!model) return;
-              console.log("getting squigles")
+
               const markers = errors.map(err => ({
                 startLineNumber: Math.max(1, (err.line ?? 0) + 1),
                 endLineNumber: Math.max(1, (err.line ?? 0) + 1),
