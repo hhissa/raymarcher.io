@@ -4,6 +4,7 @@ import { Editor } from "./src/application/editor/editor";
 import { RaymarchCanvas, RaymarchCanvasHandle } from "./src/application/canvas/raymarch_canvas";
 import { testScene } from "./test/test_scene";
 import { ShaderUseCases } from "./src/core/usecases";
+import { ShaderTabs } from "./src/application/tabs/tabs";
 
 export function App() {
   const canvasRef = useRef<RaymarchCanvasHandle>(null);
@@ -37,7 +38,10 @@ export function App() {
         zIndex: 10,
         pointerEvents: "auto" // editor should be interactable
       }}>
-        <Editor code={testScene.shader.src} onCompile={handleCompile} />
+        <ShaderTabs
+          initialCode={testScene.shader.src}
+          onCompile={handleCompile}
+        />
       </div>
     </div>
   );

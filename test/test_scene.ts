@@ -9,8 +9,8 @@ export const testScene: Scene = {
     src: ` 
    SDF map(vec3 p) {
     // Example primitives
-    SDF sphere = sdfSphere(p, vec3(0.0,0.0,-3.0), 1.0, vec3(1.0,0.0,0.0)); // red
-    SDF box    = sdfBox(p, vec3(1.0,0.0,-2.0), vec3(0.5), vec3(0.0,0.0,1.0)); // blue
+    SDF sphere = sdfSphere(p, vec3(0.0,0.0,-3.0), 0.5, vec3(1.0,0.0,0.0)); // red
+    SDF box    = sdfBox(p, vec3(0.0, 1.0,-2.0), vec3(0.2), vec3(0.0,0.0,1.0)); // blue
 
     // Combine primitives (example: smooth union)
     SDF scene = opSmoothUnion(sphere, box, 0.2);
