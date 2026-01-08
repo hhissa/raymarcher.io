@@ -4,9 +4,11 @@ import { ShaderError } from "../../core/error";
 
 // Example SDF data
 const sdfReference = `
-vec3 rotatey(vec3 p, float theta) 
+mat3 rotatey(float theta) 
 
-vec3 rotatex(vec3 p, float theta)
+mat3 rotatex(float theta)
+
+,at3 rotatez(float theta)
 // Union
 SDF opUnion(SDF a, SDF b) 
 
@@ -28,45 +30,43 @@ SDF opSmoothIntersection(SDF a, SDF b, float k)
 ///////////////////////////////////////////////////////////////////////////////////////
 // PRIMITIVES //
 
+SDF sdfSphere(vec3 p, vec3 pos, mat3 rot, float s, vec3 color)
 
-SDF sdfSphere(vec3 p, vec3 pos, float s, vec3 color) 
+SDF sdfBox(vec3 p, vec3 pos, mat3 rot, vec3 b, vec3 color)
 
-SDF sdfBox(vec3 p, vec3 pos, vec3 b, vec3 color) 
+SDF sdfRoundBox(vec3 p, vec3 pos, mat3 rot, vec3 b, float r, vec3 color)
 
-SDF sdfRoundBox(vec3 p, vec3 pos, vec3 b, float r, vec3 color) 
+SDF sdfBoxFrame(vec3 p, vec3 pos, mat3 rot, vec3 b, float e, vec3 color)
 
-SDF sdfBoxFrame(vec3 p, vec3 pos, vec3 b, float e, vec3 color)
+SDF sdfTorus(vec3 p, vec3 pos, mat3 rot, vec2 t, vec3 color)
 
-SDF sdfTorus(vec3 p, vec3 pos, vec2 t, vec3 color)
+SDF sdfCappedTorus(vec3 p, vec3 pos, mat3 rot, vec2 sc, float ra, float rb, vec3 color)
 
-SDF sdfCappedTorus(vec3 p, vec3 pos, vec2 sc, float ra, float rb, vec3 color) 
+SDF sdfLink(vec3 p, vec3 pos, mat3 rot, float le, float r1, float r2, vec3 color)
 
-SDF sdfLink(vec3 p, vec3 pos, float le, float r1, float r2, vec3 color) 
+SDF sdfCylinder(vec3 p, vec3 pos, mat3 rot, vec3 c, vec3 color)
 
-SDF sdfCylinder(vec3 p, vec3 pos, vec3 c, vec3 color) 
+SDF sdfCone(vec3 p, vec3 pos, mat3 rot, vec2 c, float h, vec3 color)
 
-SDF sdfCone(vec3 p, vec3 pos, vec2 c, float h, vec3 color) 
+SDF sdfPlane(vec3 p, vec3 pos, mat3 rot, vec3 n, float h, vec3 color)
 
-SDF sdfPlane(vec3 p, vec3 pos, vec3 n, float h, vec3 color)
+SDF sdfHexPrism(vec3 p, vec3 pos, mat3 rot, vec2 h, vec3 color)
 
-SDF sdfHexPrism(vec3 p, vec3 pos, vec2 h, vec3 color) 
+SDF sdfTriPrism(vec3 p, vec3 pos, mat3 rot, vec2 h, vec3 color)
 
-SDF sdfTriPrism(vec3 p, vec3 pos, vec2 h, vec3 color) 
+SDF sdfCapsule(vec3 p, vec3 pos, mat3 rot, vec3 a, vec3 b, float r, vec3 color)
 
-SDF sdfCapsule(vec3 p, vec3 pos, vec3 a, vec3 b, float r, vec3 color)
+SDF sdfVerticalCapsule(vec3 p, vec3 pos, mat3 rot, float h, float r, vec3 color)
 
-SDF sdfVerticalCapsule(vec3 p, vec3 pos, float h, float r, vec3 color)
+SDF sdfCappedCylinder(vec3 p, vec3 pos, mat3 rot, float r, float h, vec3 color)
 
-SDF sdfCappedCylinder(vec3 p, vec3 pos, float r, float h, vec3 color) 
+SDF sdfRoundedCylinder(vec3 p, vec3 pos, mat3 rot, float ra, float rb, float h, vec3 color)
 
-SDF sdfRoundedCylinder(vec3 p, vec3 pos, float ra, float rb, float h, vec3 color) 
+SDF sdfCappedCone(vec3 p, vec3 pos, mat3 rot, float h, float r1, float r2, vec3 color)
 
-SDF sdfCappedCone(vec3 p, vec3 pos, float h, float r1, float r2, vec3 color) 
+SDF sdfRoundCone(vec3 p, vec3 pos, mat3 rot, float r1, float r2, float h, vec3 color)
 
-SDF sdfRoundCone(vec3 p, vec3 pos, float r1, float r2, float h, vec3 color)
-
-SDF sdfEllipsoid(vec3 p, vec3 pos, vec3 r, vec3 color) 
-
+SDF sdfEllipsoid(vec3 p, vec3 pos, mat3 rot, vec3 r, vec3 color)
 `;
 
 interface Project {
