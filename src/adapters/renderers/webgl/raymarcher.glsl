@@ -2,7 +2,7 @@
 #define EPSILON 0.0001
 #define MAX_STEPS 100
 #define MAX_DISTANCE 1000.0
-#define MIN_DISTANCE 0.1
+#define MIN_DISTANCE 0.000001
 precision highp float;
 precision highp int;
 
@@ -387,18 +387,65 @@ float calcOcclusion(vec3 p, vec3 norm) {
     return clamp(1.0 - occ, 0.0, 1.0);
 }
 
-void calcLighting(inout vec3 color, in vec3 p, in vec3 norm) {
-    float occ = calcOcclusion(p, norm);
-    float sha = calcShadow(p, light.direction, 4.);
-    float sunLighting = clamp(dot(norm, light.direction), 0.0, 1.0);
-    float skyLighting = clamp(0.5 + 0.5*norm.y, 0.0, 1.0);
-    float indirectLighting = clamp(dot(norm, normalize(light.direction*vec3(-1.0,0.0,-1.0))), 0.0, 1.0);
 
-    vec3 lin = sunLighting*vec3(5.64, 1.27, 0.99) * pow(vec3(sha), vec3(1.0, 1.2, 1.5));
-    lin += skyLighting * vec3(1.16, 0.20, 0.28)*occ;
-    lin += indirectLighting*vec3(0.40,0.28,0.20)*occ;
-    color *= lin;
+void calcLighting(inout vec3 col, in vec3 p, in vec3 norm, in vec3 rd)
+{
+    vec3 viewDir = normalize(-rd);
+    vec3 keyDir  = normalize(light.direction);
+
+    float occ = calcOcclusion(p, norm);
+
+    // --------------------
+    // Key light
+    // --------------------
+    float dif = max(dot(norm, keyDir), 0.0);
+    float sha = calcShadow(p + norm * 0.02, keyDir, 4.0);
+    sha = max(sha, 0.2);
+
+    vec3 key = dif * sha * vec3(5.64, 1.27, 0.99);
+
+    // --------------------
+    // Sky (fill)
+    // --------------------
+    float sky = clamp(0.5 + 0.5 * norm.y, 0.0, 1.0);
+    vec3 fill = sky * vec3(1.16, 0.20, 0.28);
+
+    // --------------------
+    // Bounce (ground)
+    // --------------------
+    vec3 bounceDir = normalize(vec3(-keyDir.x, 0.5, -keyDir.z));
+    float bou = max(dot(norm, bounceDir), 0.0);
+    vec3 bounce = bou * vec3(0.40, 0.28, 0.20);
+
+    // --------------------
+    // Accumulate lighting
+    // --------------------
+    vec3 lin = vec3(0.12);          // ambient floor
+    lin += key;
+    lin += fill;
+    lin += bounce;
+
+    lin *= mix(0.4, 1.0, occ);      // AO modulation
+
+    col *= lin;
+
+    // --------------------
+    // Specular
+    // --------------------
+    vec3 halfDir = normalize(keyDir + viewDir);
+    float spe = pow(max(dot(norm, halfDir), 0.0), 16.0);
+    spe *= dif * sha;
+    col += spe;
+
+    // --------------------
+    // Fresnel (rim)
+    // --------------------
+    float fre = pow(clamp(1.0 - dot(norm, viewDir), 0.0, 1.0), 5.0);
+    col += fre * 0.08 * occ;
+
+    col *= 1.1;
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////////////
 // MARCHING FUNCTION //
@@ -428,7 +475,7 @@ void draw(inout vec4 color, in RayInfo ray) {
     if(hit.dist != -1.0) {
         vec3 norm = normal(p, hit.dist);
         vec3 col = hit.color;
-        calcLighting(col, p, norm);
+        calcLighting(col, p, norm, ray.dir);
         color = vec4(col, 1.0);
     } else {
         color = vec4(1.0,1.0,1.0,1.0);
@@ -444,5 +491,6 @@ void main() {
     initRayout(ray);
     initLight();
     draw(color, ray);
+    color.rgb = pow(color.rgb, vec3(1.0/2.2));
     fragColor = color;
 }
