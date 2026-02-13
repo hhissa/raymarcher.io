@@ -1,9 +1,34 @@
 
 import React, { useEffect, useRef, useState } from "react";
-import * as monaco from "monaco-editor";
+import {
+  EditorState,
+  StateField,
+  StateEffect,
+} from "@codemirror/state";
+import {
+  EditorView,
+  ViewUpdate,
+  Decoration,
+  DecorationSet,
+  lineNumbers,
+  highlightActiveLine,
+  highlightSpecialChars,
+  drawSelection,
+  dropCursor,
+  rectangularSelection,
+  crosshairCursor,
+  keymap,
+} from "@codemirror/view";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+} from "@codemirror/commands";
+import { cpp } from "@codemirror/lang-cpp";
 
-interface ShaderError {
-  line: number;      // 1-based GLSL line number
+/* ------------------ TYPES ------------------ */
+export interface ShaderError {
+  line: number; // 1-based GLSL line
   message: string;
 }
 
@@ -13,120 +38,153 @@ interface Props {
   onCompile?: (code: string) => ShaderError[];
 }
 
-/* ---- UI constants ---- */
+/* ------------------ UI CONSTANTS ------------------ */
 const HEADER_HEIGHT = 32;
 const LINE_HEIGHT = 18;
 const COLLAPSED_LINES = 3;
 const COLLAPSED_HEIGHT = HEADER_HEIGHT + COLLAPSED_LINES * LINE_HEIGHT;
-
-/* ---- If you inject hidden GLSL above user code, set this ---- */
-// const INJECTED_HEADER_LINES = 0;
 const INJECTED_HEADER_LINES = 0;
 
+/* ------------------ CODEMIRROR EFFECT ------------------ */
+const setErrorsEffect = StateEffect.define<ShaderError[]>();
+
+/* ------------------ ERROR DECORATION FIELD ------------------ */
+const errorField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+
+  update(decorations, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setErrorsEffect)) {
+        const ranges: ReturnType<Decoration["range"]>[] = [];
+
+        for (const err of effect.value) {
+          const lineNumber = err.line - INJECTED_HEADER_LINES;
+          if (lineNumber < 1 || lineNumber > tr.state.doc.lines) continue;
+
+          const line = tr.state.doc.line(lineNumber);
+
+          const deco = Decoration.line({
+            attributes: {
+              style: "background: rgba(255, 0, 0, 0.18)",
+              title: err.message,
+            },
+          });
+
+          ranges.push(deco.range(line.from));
+        }
+
+        return Decoration.set(ranges, true);
+      }
+    }
+
+    return decorations;
+  },
+
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+/* ------------------ COMPONENT ------------------ */
 export const Editor: React.FC<Props> = ({
   code = "",
   onChange,
   onCompile,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
-
+  const viewRef = useRef<EditorView | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [errors, setErrors] = useState<ShaderError[]>([]);
 
-  /* ------------------ INIT EDITOR ------------------ */
+  /* ------------------ INIT CODEMIRROR ------------------ */
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const editor = monaco.editor.create(containerRef.current, {
-      value: code,
-      language: "glsl",
-      theme: "vs-dark",
-      automaticLayout: true,
-      minimap: { enabled: false },
+    const state = EditorState.create({
+      doc: code,
+      extensions: [
+        lineNumbers(),
+        highlightActiveLine(),
+        highlightSpecialChars(),
+        drawSelection(),
+        dropCursor(),
+        rectangularSelection(),
+        crosshairCursor(),
+
+        history(),
+        keymap.of([...defaultKeymap, ...historyKeymap]),
+
+        cpp(),
+
+        EditorView.lineWrapping,
+
+        EditorView.updateListener.of((v: ViewUpdate) => {
+          if (v.docChanged) onChange?.(v.state.doc.toString());
+        }),
+
+        /* THEME */
+        EditorView.theme({
+          "&": {
+            height: "100%",
+            backgroundColor: "#1e1e1e",
+            color: "white",
+            fontSize: "14px",
+          },
+          ".cm-content": {
+            fontFamily: "monospace",
+          },
+          ".cm-scroller": {
+            overflow: "auto",
+            WebkitOverflowScrolling: "touch",
+            minHeight: 0, // important for flex scrolling on mobile
+          },
+          ".cm-gutters": {
+            backgroundColor: "#1e1e1e",
+            color: "#888",
+            border: "none",
+          },
+        }),
+
+        errorField,
+      ],
     });
 
-    editorRef.current = editor;
-
-    const changeListener = editor.onDidChangeModelContent(() => {
-      const value = editor.getValue();
-      onChange?.(value);
+    const view = new EditorView({
+      state,
+      parent: containerRef.current,
     });
+
+    viewRef.current = view;
 
     return () => {
-      changeListener.dispose();
-      editor.dispose();
-      editorRef.current = null;
+      view.destroy();
+      viewRef.current = null;
     };
   }, []);
 
-  /* ------------------ SYNC CODE ------------------ */
+  /* ------------------ SYNC EXTERNAL CODE ------------------ */
   useEffect(() => {
-    const editor = editorRef.current;
-    const model = editor?.getModel();
-    if (!editor || !model) return;
+    const view = viewRef.current;
+    if (!view) return;
 
-    if (model.getValue() !== code) {
-      editor.pushUndoStop();
-      model.setValue(code);
-      editor.pushUndoStop();
+    const current = view.state.doc.toString();
+    if (current !== code) {
+      view.dispatch({
+        changes: { from: 0, to: current.length, insert: code },
+      });
     }
   }, [code]);
 
-  /* ------------------ ERROR MARKERS ------------------ */
-  useEffect(() => {
-    const editor = editorRef.current;
-    const model = editor?.getModel();
-    if (!model) return;
-
-    if (errors.length === 0) {
-      monaco.editor.setModelMarkers(model, "shader-errors", []);
-      return;
-    }
-
-    const lineCount = model.getLineCount();
-
-    const markers: monaco.editor.IMarkerData[] = errors.map(err => {
-      // Translate compiler line → editor line
-      const rawLine = err.line - INJECTED_HEADER_LINES;
-
-      // Clamp (CRITICAL: out-of-range = no markers rendered)
-      const line = Math.min(
-        Math.max(1, rawLine),
-        lineCount
-      );
-      console.log(line)
-      return {
-        startLineNumber: line + 1,
-        endLineNumber: line + 1,
-        startColumn: 1,
-        endColumn: model.getLineLength(line) + 1,
-        message: err.message,
-        severity: monaco.MarkerSeverity.Error,
-      };
-    });
-
-    monaco.editor.setModelMarkers(model, "shader-errors", markers);
-  }, [errors]);
-
   /* ------------------ COMPILE ------------------ */
   const compile = () => {
-    const editor = editorRef.current;
-    if (!editor || !onCompile) return;
-    const codeValue = editor.getValue();
-    const compileErrors = onCompile(codeValue) ?? [];
+    const view = viewRef.current;
+    if (!view || !onCompile) return;
 
-    console.log("=== COMPILE DEBUG ===");
-    console.log("Errors returned:", compileErrors);
-    console.log("Error count:", compileErrors.length);
-    if (compileErrors.length > 0) {
-      console.log("First error:", compileErrors[0]);
-      console.log("Line number:", compileErrors[0].line);
-    }
-    console.log("Editor line count:", editor.getModel()?.getLineCount());
-    console.log("===================");
+    const src = view.state.doc.toString();
+    const compileErrors = onCompile(src) ?? [];
 
-    setErrors(compileErrors);
+    view.dispatch({
+      effects: setErrorsEffect.of(compileErrors),
+    });
   };
 
   /* ------------------ RENDER ------------------ */
@@ -135,12 +193,11 @@ export const Editor: React.FC<Props> = ({
       style={{
         position: "relative",
         width: "100%",
-        height: collapsed ? COLLAPSED_HEIGHT : "40vh",
+        height: collapsed ? COLLAPSED_HEIGHT : "100%",
         transition: "height 200ms ease",
-        background: "#1e1e1e",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden",
+        background: "#1e1e1e",
       }}
     >
       {/* Header */}
@@ -152,9 +209,10 @@ export const Editor: React.FC<Props> = ({
           padding: "0 8px",
           borderBottom: "1px solid #333",
           userSelect: "none",
+          flexShrink: 0,
         }}
       >
-        <button onClick={() => setCollapsed(v => !v)}>
+        <button onClick={() => setCollapsed((v) => !v)}>
           {collapsed ? "▲" : "▼"}
         </button>
 
@@ -165,8 +223,16 @@ export const Editor: React.FC<Props> = ({
         <button onClick={compile}>Compile</button>
       </div>
 
-      {/* Monaco */}
-      <div ref={containerRef} style={{ flex: 1 }} />
+      {/* Editor */}
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1,
+          minHeight: 0, // ✅ critical for flex scrolling on mobile
+          touchAction: "pan-y",
+          WebkitOverflowScrolling: "touch",
+        }}
+      />
     </div>
   );
 };

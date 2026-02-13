@@ -402,7 +402,7 @@ void calcLighting(inout vec3 col, in vec3 p, in vec3 norm, in vec3 rd)
     float sha = calcShadow(p + norm * 0.02, keyDir, 4.0);
     sha = max(sha, 0.2);
 
-    vec3 key = dif * sha * vec3(5.64, 1.27, 0.99);
+    vec3 key = dif * sha * vec3(0.64, 1.27, 0.99);
 
     // --------------------
     // Sky (fill)

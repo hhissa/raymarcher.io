@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Editor } from "../editor/editor";
 import { ShaderError } from "../../core/error";
 
@@ -69,16 +69,18 @@ SDF sdfRoundCone(vec3 p, vec3 pos, mat3 rot, float r1, float r2, float h, vec3 c
 SDF sdfEllipsoid(vec3 p, vec3 pos, mat3 rot, vec3 r, vec3 color)
 `;
 
+
 interface Project {
   name: string;
   code: string;
 }
 
-
 interface ShaderTabsProps {
   initialCode?: string;
-  onCompile?: (code: string) => ShaderError[]; // pass compile events up
+  onCompile?: (code: string) => ShaderError[];
 }
+
+const STORAGE_KEY = "shader-projects";
 
 export const ShaderTabs: React.FC<ShaderTabsProps> = ({
   initialCode = "",
@@ -89,9 +91,42 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
   );
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentCode, setCurrentCode] = useState<string>(initialCode);
+  const [newProjectName, setNewProjectName] = useState("");
 
-  const saveProject = (name: string) => {
+  // ------------------------
+  // Load projects from localStorage
+  // ------------------------
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return;
+
+    try {
+      const parsed: Project[] = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        setProjects(parsed);
+      }
+    } catch {
+      console.warn("Failed to parse saved shader projects");
+    }
+  }, []);
+
+  // ------------------------
+  // Persist projects to localStorage
+  // ------------------------
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+  }, [projects]);
+
+  // ------------------------
+  // Project helpers
+  // ------------------------
+
+  const saveProject = () => {
+    const name = newProjectName.trim();
+    if (!name) return;
+
     setProjects((prev) => [...prev, { name, code: currentCode }]);
+    setNewProjectName("");
   };
 
   const loadProject = (project: Project) => {
@@ -99,24 +134,49 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
     setActiveTab("editor");
   };
 
+  const deleteProject = (index: number) => {
+    setProjects((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // ------------------------
+  // Render
+  // ------------------------
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Tabs */}
       <div style={{ display: "flex", borderBottom: "1px solid #333" }}>
         <button
-          style={{ flex: 1, color: "white", padding: 8, background: activeTab === "editor" ? "#555" : "#222" }}
+          style={{
+            flex: 1,
+            color: "white",
+            padding: 8,
+            background: activeTab === "editor" ? "#555" : "#222",
+          }}
           onClick={() => setActiveTab("editor")}
         >
           Editor
         </button>
+
         <button
-          style={{ flex: 1, color: "white", padding: 8, background: activeTab === "sdf" ? "#555" : "#222" }}
+          style={{
+            flex: 1,
+            color: "white",
+            padding: 8,
+            background: activeTab === "sdf" ? "#555" : "#222",
+          }}
           onClick={() => setActiveTab("sdf")}
         >
           SDF Reference
         </button>
+
         <button
-          style={{ flex: 1, color: "white", padding: 8, background: activeTab === "projects" ? "#555" : "#222" }}
+          style={{
+            flex: 1,
+            color: "white",
+            padding: 8,
+            background: activeTab === "projects" ? "#555" : "#222",
+          }}
           onClick={() => setActiveTab("projects")}
         >
           Projects
@@ -130,12 +190,8 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
             code={currentCode}
             onChange={setCurrentCode}
             onCompile={(code) => {
-              // Propagate to parent
-              if (onCompile) {
-                return onCompile(code);
-              } else {
-                return []
-              }
+              if (onCompile) return onCompile(code);
+              return [];
             }}
           />
         )}
@@ -169,23 +225,60 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
               gap: 8,
             }}
           >
-            <button onClick={() => saveProject(`Project ${projects.length + 1}`)}>
-              Save Current Shader
-            </button>
+            {/* Save project */}
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="Project name"
+                style={{
+                  flex: 1,
+                  padding: 6,
+                  background: "#111",
+                  color: "white",
+                  border: "1px solid #444",
+                }}
+              />
+              <button onClick={saveProject}>Save</button>
+            </div>
 
             {projects.length === 0 && <div>No projects yet</div>}
-            {projects.map((p, idx) => (
+
+            {projects.map((project, idx) => (
               <div
                 key={idx}
                 style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
                   padding: 8,
                   border: "1px solid #444",
-                  cursor: "pointer",
                   background: "#222",
                 }}
-                onClick={() => loadProject(p)}
               >
-                {p.name}
+                {/* Load */}
+                <div
+                  style={{ flex: 1, cursor: "pointer" }}
+                  onClick={() => loadProject(project)}
+                >
+                  {project.name}
+                </div>
+
+                {/* Delete */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteProject(idx);
+                  }}
+                  style={{
+                    background: "#400",
+                    color: "white",
+                    border: "1px solid #800",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
@@ -194,4 +287,4 @@ export const ShaderTabs: React.FC<ShaderTabsProps> = ({
     </div>
   );
 };
-;
+
